@@ -35,8 +35,6 @@
 #include <ctime>
 #include <cstring>
 
-
-
 /**
   * helper routine: check if array is sorted correctly
   */
@@ -91,11 +89,18 @@ void MsMergeSequential(int *out, int *in, long begin1, long end1, long begin2, l
 // TODO: remember one additional parameter (depth)
 // TODO: recursive calls could be taskyfied
 // TODO: task synchronization also is required
-void MsSequential(int *array, int *tmp, bool inplace, long begin, long end) {
+void MsSequential(int *array, int *tmp, bool inplace, long begin, long end, long depth) {
 	if (begin < (end - 1)) {
 		const long half = (begin + end) / 2;
-		MsSequential(array, tmp, !inplace, begin, half);
-		MsSequential(array, tmp, !inplace, half, end);
+
+		#pragma omp task shared(array, tmp)
+            MsSequential(array, tmp, !inplace, begin, half, depth);
+
+        #pragma omp task shared(array, tmp)
+            MsSequential(array, tmp, !inplace, half, end, depth);
+
+        #pragma omp taskwait
+		
 		if (inplace) {
 			MsMergeSequential(array, tmp, begin, half, half, end, begin);
 		} else {
@@ -113,9 +118,9 @@ void MsSequential(int *array, int *tmp, bool inplace, long begin, long end) {
 // TODO: this function should create the parallel region
 // TODO: good point to compute a good depth level (cut-off)
 void MsSerial(int *array, int *tmp, const size_t size) {
-
+	long max_depth=2; //random value, don't know what it means
    // TODO: parallel version of MsSequential will receive one more parameter: 'depth' (used as cut-off)
-	MsSequential(array, tmp, true, 0, size);
+    MsSequential(array, tmp, true, 0, size, max_depth);
 }
 
 
