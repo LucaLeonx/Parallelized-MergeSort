@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <sys/time.h>
+#include <omp.h>
 
 #include <iostream>
 #include <algorithm>
@@ -92,15 +93,19 @@ void MsMergeSequential(int *out, int *in, long begin1, long end1, long begin2, l
 void MsSequential(int *array, int *tmp, bool inplace, long begin, long end, long depth) {
 	if (begin < (end - 1)) {
 		const long half = (begin + end) / 2;
-
-		#pragma omp task shared(array, tmp)
-            MsSequential(array, tmp, !inplace, begin, half, depth);
-
-        #pragma omp task shared(array, tmp)
-            MsSequential(array, tmp, !inplace, half, end, depth);
-
-        #pragma omp taskwait
-		
+		if(end - begin < depth){
+			MsSequential(array, tmp, !inplace, begin, half,depth);
+			MsSequential(array, tmp, !inplace, half, end,depth);
+		}
+		else{
+			#pragma omp task shared(array, tmp)
+				MsSequential(array, tmp, !inplace, begin, half, depth);
+			#pragma omp task shared(array, tmp)
+				MsSequential(array, tmp, !inplace, half, end, depth);
+			//printf("\nNumber of Threads: %d\n",omp_get_num_threads);
+			//std::cout<< omp_get_num_threads <<std::endl;
+			#pragma omp taskwait
+		}
 		if (inplace) {
 			MsMergeSequential(array, tmp, begin, half, half, end, begin);
 		} else {
@@ -118,9 +123,9 @@ void MsSequential(int *array, int *tmp, bool inplace, long begin, long end, long
 // TODO: this function should create the parallel region
 // TODO: good point to compute a good depth level (cut-off)
 void MsSerial(int *array, int *tmp, const size_t size) {
-	long max_depth=2; //random value, don't know what it means
-   // TODO: parallel version of MsSequential will receive one more parameter: 'depth' (used as cut-off)
-    MsSequential(array, tmp, true, 0, size, max_depth);
+	long max_depth=32; //random value, don't know what it means
+   	// TODO: parallel version of MsSequential will receive one more parameter: 'depth' (used as cut-off)
+    MsSequential(array, tmp, true, 0, size, max_depth);	
 }
 
 
