@@ -36,6 +36,8 @@
 #include <ctime>
 #include <cstring>
 
+#define CUT_OFF 512 
+
 /**
   * helper routine: check if array is sorted correctly
   */
@@ -49,6 +51,13 @@ bool isSorted(int ref[], int data[], const size_t size){
 	return true;
 }
 
+
+void tmpToArray(int *out,int *in,long LorR,long end,long idx){
+	while (LorR < end) {
+		out[idx] = in[LorR];
+		LorR++, idx++;
+	}
+}
 
 /**
   * sequential merge step (straight-forward implementation)
@@ -73,14 +82,25 @@ void MsMergeSequential(int *out, int *in, long begin1, long end1, long begin2, l
 	}
 
 	long idx2 = idx;
-	while (left < end1) {
-		out[idx] = in[left];
-		left++, idx++;
+	if(end1 - begin1 > CUT_OFF || end2 - begin2 > CUT_OFF){
+		#pragma omp parallel 
+		{
+			#pragma omp sections
+			{	
+				#pragma omp section
+				{
+					tmpToArray(out,in,left,end1,idx);
+				}
+				#pragma omp section
+				{
+					tmpToArray(out,in,right,end2,idx);
+				}
+			}
+		}
 	}
-	
-	while (right < end2) {
-		out[idx2] = in[right];
-		right++, idx2++;
+	else{
+		tmpToArray(out,in,left,end1,idx);
+		tmpToArray(out,in,right,end2,idx);	
 	}
 }
 
@@ -133,7 +153,7 @@ void MsSequential(int *array, int *tmp, bool inplace, long begin, long end, long
 // TODO: this function should create the parallel region
 // TODO: good point to compute a good depth level (cut-off)
 void MsSerial(int *array, int *tmp, const size_t size) {
-	long max_depth=512; 
+	long max_depth=CUT_OFF; 
    	// TODO: parallel version of MsSequential will receive one more parameter: 'depth' (used as cut-off)
     #pragma omp parallel
 	{
