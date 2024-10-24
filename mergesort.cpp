@@ -130,8 +130,6 @@ void MsSequential(int *array, int *tmp, bool inplace, long begin, long end, long
 					MsSequential(array, tmp, !inplace, begin, half, depth);
 				#pragma omp task shared(array, tmp)
 					MsSequential(array, tmp, !inplace, half, end, depth);
-				//printf("\nNumber of Threads: %d\n",omp_get_num_threads);
-				//std::cout<< omp_get_num_threads <<std::endl;
 			}
 			if (inplace) {
 				#pragma omp task
@@ -155,7 +153,7 @@ void MsSequential(int *array, int *tmp, bool inplace, long begin, long end, long
 void MsSerial(int *array, int *tmp, const size_t size) {
 	long max_depth=CUT_OFF; 
    	// TODO: parallel version of MsSequential will receive one more parameter: 'depth' (used as cut-off)
-    #pragma omp parallel
+    	#pragma omp parallel
 	{
 		#pragma omp master
 		{
